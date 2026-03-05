@@ -5,11 +5,14 @@ import numpy as np
 
 class EmbeddingModel:
     def __init__(self):
-        # Load pre-trained sentence transformer model
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.model = None  # do not load immediately
+
+    def load_model(self):
+        if self.model is None:
+            self.model = SentenceTransformer("all-MiniLM-L6-v2")
 
     def encode(self, text: str):
-        # Convert text into embedding vector
+        self.load_model()
         embedding = self.model.encode(text)
         return embedding
 
@@ -17,14 +20,12 @@ class EmbeddingModel:
         emb1 = self.encode(text1)
         emb2 = self.encode(text2)
 
-        # Reshape because sklearn expects 2D arrays
         emb1 = emb1.reshape(1, -1)
         emb2 = emb2.reshape(1, -1)
 
         score = cosine_similarity(emb1, emb2)[0][0]
-
         return float(score)
 
 
-# Singleton instance (load once)
+# Singleton instance
 embedding_model = EmbeddingModel()
