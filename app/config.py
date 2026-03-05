@@ -12,9 +12,8 @@ class Settings:
         self.DB_NAME = os.getenv("DB_NAME")
 
         self.DATABASE_URL = (
-    f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}"
-    f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-    "?ssl_mode=REQUIRED"
-)
+        f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}"
+        f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        )
 
 settings = Settings()
