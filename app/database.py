@@ -7,7 +7,7 @@ engine = create_engine(
     settings.DATABASE_URL,
     echo=True,
     pool_pre_ping=True,
-    connect_args={"ssl": {"ssl-mode": "REQUIRED"}}
+    connect_args={"ssl": {}}
 )
 
 # Create session Factory
