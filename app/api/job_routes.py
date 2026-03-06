@@ -13,8 +13,18 @@ router = APIRouter()
 @router.post("/create-job")
 def create_job(description_text: str, db: Session = Depends(get_db)):
 
+    text = description_text.strip()
+
+    # Extract title safely
+    first_line = text.split("\n")[0].strip()
+
+    if "Job Title:" in first_line:
+        title = first_line.replace("Job Title:", "").strip()
+    else:
+        title = first_line
+
     job = JobDescription(
-        description_text=description_text
+        description_text=text
     )
 
     db.add(job)
@@ -23,8 +33,8 @@ def create_job(description_text: str, db: Session = Depends(get_db)):
 
     return {
         "job_id": job.id,
-        "title": description_text.split("\n")[0].replace("Job Title:", "").strip(),
-        "description_text": job.description_text
+        "title": title,
+        "description_text": text
     }
 
 
@@ -40,10 +50,17 @@ def get_jobs(db: Session = Depends(get_db)):
 
     for job in jobs:
 
-        text = job.description_text.strip()
+        text = (job.description_text or "").strip()
 
-        # Extract title from first line
-        title = text.split("\n")[0].replace("Job Title:", "").strip()
+        if not text:
+            continue
+
+        first_line = text.split("\n")[0].strip()
+
+        if "Job Title:" in first_line:
+            title = first_line.replace("Job Title:", "").strip()
+        else:
+            title = first_line
 
         results.append({
             "job_id": job.id,

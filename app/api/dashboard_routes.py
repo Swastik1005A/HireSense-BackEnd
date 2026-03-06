@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.database import SessionLocal
+
+from app.database import get_db
 from app.models.candidate import Candidate
 from app.models.score import Score
 from app.models.job_description import JobDescription
@@ -9,31 +10,30 @@ from app.models.job_description import JobDescription
 router = APIRouter()
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 @router.get("/dashboard")
 def dashboard_stats(db: Session = Depends(get_db)):
 
-    candidates = db.query(Candidate).all()
-    scores = db.query(Score).all()
-    jobs = db.query(JobDescription).all()
+    # -----------------------------
+    # Basic counts (fast SQL queries)
+    # -----------------------------
 
-    total_candidates = len(candidates)
-    total_jobs = len(jobs)
-    total_rankings = len(scores)
+    total_candidates = db.query(func.count(Candidate.id)).scalar() or 0
+    total_jobs = db.query(func.count(JobDescription.id)).scalar() or 0
+    total_rankings = db.query(func.count(Score.id)).scalar() or 0
 
-    avg_score = (
-        sum([s.final_score for s in scores]) / len(scores)
-        if scores else 0
-    )
+    # -----------------------------
+    # Average score
+    # -----------------------------
 
+    avg_score = db.query(func.avg(Score.final_score)).scalar() or 0
+    average_score = round(avg_score * 100, 2)
+
+    # -----------------------------
     # Score distribution
+    # -----------------------------
+
+    scores = db.query(Score.final_score).all()
+
     distribution = {
         "90-100": 0,
         "80-89": 0,
@@ -45,7 +45,7 @@ def dashboard_stats(db: Session = Depends(get_db)):
 
     for s in scores:
 
-        score = (s.final_score or 0) * 100
+        score = (s[0] or 0) * 100
 
         if score >= 90:
             distribution["90-100"] += 1
@@ -65,15 +65,22 @@ def dashboard_stats(db: Session = Depends(get_db)):
         for k, v in distribution.items()
     ]
 
+    # -----------------------------
     # Top skills
+    # -----------------------------
+
+    candidates = db.query(Candidate.skills).all()
+
     skill_count = {}
 
     for c in candidates:
 
-        if not c.skills:
+        skills = c[0]
+
+        if not skills:
             continue
 
-        for skill in c.skills:
+        for skill in skills:
             skill_count[skill] = skill_count.get(skill, 0) + 1
 
     top_skills = sorted(
@@ -87,11 +94,15 @@ def dashboard_stats(db: Session = Depends(get_db)):
         for skill, count in top_skills
     ]
 
+    # -----------------------------
+    # Response
+    # -----------------------------
+
     return {
         "totalCandidates": total_candidates,
         "totalJobs": total_jobs,
         "totalRankings": total_rankings,
-        "averageScore": round(avg_score * 100, 2),
+        "averageScore": average_score,
         "scoreDistribution": score_distribution,
         "topSkills": top_skills_chart
     }
