@@ -1,12 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Database
-from app.database import engine
-from app.models import Base
-
-# Import models so SQLAlchemy registers them
-from app.models import candidate, education, job_description, score
+# Import DB initializer
+from app.init_db import init_db
 
 # Routers
 from app.api.resume_routes import router as resume_router
@@ -17,25 +13,18 @@ from app.api.candidate_routes import router as candidate_router
 from app.api.dashboard_routes import router as dashboard_router
 
 
-# -----------------------------
-# Create FastAPI App
-# -----------------------------
 app = FastAPI(title="HireSense AI Backend")
 
 
-# -----------------------------
-# Create Database Tables
-# -----------------------------
-Base.metadata.create_all(bind=engine)
+# Initialize database tables
+init_db()
 
 
-# -----------------------------
-# CORS Configuration
-# -----------------------------
+# CORS
 origins = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
-    "https://hiresense-ai-lac.vercel.app",
+    "https://hiresense-ai-lac.vercel.app"
 ]
 
 app.add_middleware(
@@ -47,9 +36,7 @@ app.add_middleware(
 )
 
 
-# -----------------------------
-# Register Routers
-# -----------------------------
+# Routers
 app.include_router(job_router)
 app.include_router(resume_router)
 app.include_router(ranking_router)
@@ -58,9 +45,6 @@ app.include_router(dashboard_router)
 app.include_router(analytics_router)
 
 
-# -----------------------------
-# Root Endpoint
-# -----------------------------
 @app.get("/")
 def root():
     return {"message": "HireSense AI Backend is running"}
