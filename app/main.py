@@ -4,6 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 # Import DB initializer
 from app.init_db import init_db
 
+# ML Model
+from app.ml.model import embedding_model
+
 # Routers
 from app.api.resume_routes import router as resume_router
 from app.api.ranking_routes import router as ranking_router
@@ -16,11 +19,25 @@ from app.api.dashboard_routes import router as dashboard_router
 app = FastAPI(title="HireSense AI Backend")
 
 
-# Initialize database tables
-init_db()
+# -----------------------------
+# Startup Tasks
+# -----------------------------
+@app.on_event("startup")
+def startup_event():
+
+    # Initialize database
+    init_db()
+
+    # Preload embedding model
+    embedding_model.load_model()
+
+    print("Database initialized")
+    print("Embedding model loaded")
 
 
+# -----------------------------
 # CORS
+# -----------------------------
 origins = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
@@ -36,7 +53,9 @@ app.add_middleware(
 )
 
 
+# -----------------------------
 # Routers
+# -----------------------------
 app.include_router(job_router)
 app.include_router(resume_router)
 app.include_router(ranking_router)

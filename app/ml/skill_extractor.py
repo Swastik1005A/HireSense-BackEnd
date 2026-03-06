@@ -3,19 +3,35 @@ from app.ml.skill_taxonomy import TECH_SKILLS
 from app.ml.model import embedding_model
 import re
 
-# Load model reference
-model = embedding_model.model
+# Reference to embedding model
+model = getattr(embedding_model, "model", None)
 
-# Lazy-loaded embeddings
+# Lazy cached skill embeddings
 skill_embeddings = None
 
 SIMILARITY_THRESHOLD = 0.48
 
 
-def extract_skills_semantic(text: str):
+def _ensure_model():
+    """
+    Ensure embedding model is loaded.
+    Prevents NoneType crashes.
+    """
+    global model
+
+    if model is None:
+        raise RuntimeError(
+            "SentenceTransformer model not loaded. "
+            "Check app/ml/model.py initialization."
+        )
+
+
+def _get_skill_embeddings():
+    """
+    Lazy-load skill embeddings once.
+    """
     global skill_embeddings
 
-    # Compute skill embeddings only when first needed
     if skill_embeddings is None:
         skill_embeddings = model.encode(
             TECH_SKILLS,
@@ -23,13 +39,24 @@ def extract_skills_semantic(text: str):
             normalize_embeddings=True
         )
 
+    return skill_embeddings
+
+
+def extract_skills_semantic(text: str):
+    """
+    Extract skills from resume using semantic similarity.
+    """
+
+    _ensure_model()
+    embeddings = _get_skill_embeddings()
+
     detected_skills = set()
 
-    # Split resume into chunks
+    # Split resume text into chunks
     chunks = re.split(r"[,\n•\-:]", text)
 
     for chunk in chunks:
-        chunk = chunk.strip()
+        chunk = chunk.strip().lower()
 
         if len(chunk) < 3:
             continue
@@ -40,7 +67,7 @@ def extract_skills_semantic(text: str):
             normalize_embeddings=True
         )
 
-        similarities = util.cos_sim(chunk_embedding, skill_embeddings)[0]
+        similarities = util.cos_sim(chunk_embedding, embeddings)[0]
 
         for i, score in enumerate(similarities):
             if score.item() > SIMILARITY_THRESHOLD:
