@@ -14,4 +14,4 @@ class Score(Base):
     
 
     final_score = Column(Float)
-    bias_flag = Column(String)
+    bias_flag = Column(String(50))
