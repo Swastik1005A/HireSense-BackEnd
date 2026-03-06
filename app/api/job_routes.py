@@ -8,6 +8,49 @@ router = APIRouter()
 
 
 # -----------------------------
+# JOB TITLE DETECTOR
+# -----------------------------
+def detect_job_title(text: str) -> str:
+
+    t = text.lower()
+
+    if "data science intern" in t:
+        return "Data Science Intern"
+
+    if "data scientist" in t:
+        return "Data Scientist"
+
+    if "machine learning" in t:
+        return "Machine Learning Engineer"
+
+    if "data analyst" in t:
+        return "Data Analyst"
+
+    if "backend" in t:
+        return "Backend Developer"
+
+    if "frontend" in t:
+        return "Frontend Developer"
+
+    if "full stack" in t or "fullstack" in t:
+        return "Full Stack Developer"
+
+    if "ai engineer" in t or "artificial intelligence" in t:
+        return "AI Engineer"
+
+    if "software engineer" in t:
+        return "Software Engineer"
+
+    # fallback: short version of first line
+    first_line = text.split("\n")[0].strip()
+
+    if len(first_line) > 60:
+        return first_line[:60] + "..."
+
+    return first_line
+
+
+# -----------------------------
 # CREATE JOB
 # -----------------------------
 @router.post("/create-job")
@@ -15,13 +58,7 @@ def create_job(description_text: str, db: Session = Depends(get_db)):
 
     text = description_text.strip()
 
-    # Extract title safely
-    first_line = text.split("\n")[0].strip()
-
-    if "Job Title:" in first_line:
-        title = first_line.replace("Job Title:", "").strip()
-    else:
-        title = first_line
+    title = detect_job_title(text)
 
     job = JobDescription(
         description_text=text
@@ -55,12 +92,7 @@ def get_jobs(db: Session = Depends(get_db)):
         if not text:
             continue
 
-        first_line = text.split("\n")[0].strip()
-
-        if "Job Title:" in first_line:
-            title = first_line.replace("Job Title:", "").strip()
-        else:
-            title = first_line
+        title = detect_job_title(text)
 
         results.append({
             "job_id": job.id,
