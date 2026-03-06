@@ -3,74 +3,74 @@ from app.ml.skill_taxonomy import TECH_SKILLS
 from app.ml.model import embedding_model
 import re
 
-# Reference to embedding model
-model = getattr(embedding_model, "model", None)
+SIMILARITY_THRESHOLD = 0.30
 
-# Lazy cached skill embeddings
+# cached embeddings
 skill_embeddings = None
 
-SIMILARITY_THRESHOLD = 0.48
 
-
-def _ensure_model():
+def get_skill_embeddings():
     """
-    Ensure embedding model is loaded.
-    Prevents NoneType crashes.
-    """
-    global model
-
-    if model is None:
-        raise RuntimeError(
-            "SentenceTransformer model not loaded. "
-            "Check app/ml/model.py initialization."
-        )
-
-
-def _get_skill_embeddings():
-    """
-    Lazy-load skill embeddings once.
+    Compute skill embeddings once and cache them.
     """
     global skill_embeddings
 
     if skill_embeddings is None:
-        skill_embeddings = model.encode(
-            TECH_SKILLS,
-            convert_to_tensor=True,
-            normalize_embeddings=True
-        )
+        skill_embeddings = embedding_model.encode(TECH_SKILLS)
 
     return skill_embeddings
 
 
 def extract_skills_semantic(text: str):
     """
-    Extract skills from resume using semantic similarity.
+    Extract skills from resume using:
+    1. Keyword matching
+    2. Semantic similarity
     """
-
-    _ensure_model()
-    embeddings = _get_skill_embeddings()
 
     detected_skills = set()
 
-    # Split resume text into chunks
-    chunks = re.split(r"[,\n•\-:]", text)
+    text_lower = text.lower()
+
+    # -----------------------------
+    # 1️⃣ KEYWORD MATCH (FAST PASS)
+    # -----------------------------
+    for skill in TECH_SKILLS:
+        if skill.lower() in text_lower:
+            detected_skills.add(skill)
+
+    # -----------------------------
+    # 2️⃣ SEMANTIC MATCH
+    # -----------------------------
+
+    embeddings = get_skill_embeddings()
+
+    # split resume into chunks
+    chunks = re.split(r"[,\n•\-:|/]", text_lower)
+
+    cleaned_chunks = []
 
     for chunk in chunks:
-        chunk = chunk.strip().lower()
+        chunk = chunk.strip()
 
         if len(chunk) < 3:
             continue
 
-        chunk_embedding = model.encode(
-            chunk,
-            convert_to_tensor=True,
-            normalize_embeddings=True
-        )
+        cleaned_chunks.append(chunk)
+
+    if not cleaned_chunks:
+        return list(detected_skills)
+
+    # batch encode chunks
+    chunk_embeddings = embedding_model.encode(cleaned_chunks)
+
+    for idx, chunk_embedding in enumerate(chunk_embeddings):
 
         similarities = util.cos_sim(chunk_embedding, embeddings)[0]
 
         for i, score in enumerate(similarities):
+
             if score.item() > SIMILARITY_THRESHOLD:
                 detected_skills.add(TECH_SKILLS[i])
 
-    return list(detected_skills)
+    return sorted(list(detected_skills))
