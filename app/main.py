@@ -21,7 +21,8 @@ app = FastAPI(title="HireSense AI Backend")
 
 origins = [
     "http://localhost:8080",
-    "http://127.0.0.1:8080"
+    "http://127.0.0.1:8080",
+    "https://hiresense-ai-lac.vercel.app"
 ]
 
 app.add_middleware(
