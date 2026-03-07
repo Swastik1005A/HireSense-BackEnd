@@ -3,7 +3,8 @@ from app.ml.skill_taxonomy import TECH_SKILLS
 from app.ml.model import embedding_model
 import re
 
-SIMILARITY_THRESHOLD = 0.30
+# Higher threshold to prevent false matches
+SIMILARITY_THRESHOLD = 0.65
 
 # cached embeddings
 skill_embeddings = None
@@ -51,26 +52,39 @@ def extract_skills_semantic(text: str):
     cleaned_chunks = []
 
     for chunk in chunks:
+
         chunk = chunk.strip()
 
-        if len(chunk) < 3:
+        # ignore useless chunks
+        if len(chunk) < 4:
+            continue
+
+        # ignore very long sentences
+        if len(chunk) > 120:
             continue
 
         cleaned_chunks.append(chunk)
 
     if not cleaned_chunks:
-        return list(detected_skills)
+        return sorted(list(detected_skills))
 
-    # batch encode chunks
+    # encode chunks
     chunk_embeddings = embedding_model.encode(cleaned_chunks)
 
-    for idx, chunk_embedding in enumerate(chunk_embeddings):
+    for chunk_embedding in chunk_embeddings:
 
         similarities = util.cos_sim(chunk_embedding, embeddings)[0]
 
         for i, score in enumerate(similarities):
 
-            if score.item() > SIMILARITY_THRESHOLD:
-                detected_skills.add(TECH_SKILLS[i])
+            if score.item() >= SIMILARITY_THRESHOLD:
+
+                skill = TECH_SKILLS[i]
+
+                # avoid very short skill noise
+                if len(skill) < 2:
+                    continue
+
+                detected_skills.add(skill)
 
     return sorted(list(detected_skills))
