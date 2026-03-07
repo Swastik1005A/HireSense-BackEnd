@@ -14,10 +14,7 @@ def detect_job_title(text: str) -> str:
 
     t = text.lower()
 
-    # Order matters (more specific first)
-
-    if "machine learning engineer" in t or "machine learning" in t:
-        return "Machine Learning Engineer"
+    # MOST SPECIFIC FIRST
 
     if "data science intern" in t:
         return "Data Science Intern"
@@ -28,22 +25,28 @@ def detect_job_title(text: str) -> str:
     if "data analyst" in t:
         return "Data Analyst"
 
-    if "backend developer" in t or "backend" in t:
-        return "Backend Developer"
-
-    if "frontend developer" in t or "frontend" in t:
-        return "Frontend Developer"
-
     if "full stack" in t or "fullstack" in t:
         return "Full Stack Developer"
 
-    if "ai engineer" in t or "artificial intelligence" in t:
+    if "backend" in t:
+        return "Backend Developer"
+
+    if "frontend" in t:
+        return "Frontend Developer"
+
+    if "machine learning engineer" in t:
+        return "Machine Learning Engineer"
+
+    if "machine learning" in t:
+        return "Machine Learning Engineer"
+
+    if "ai engineer" in t or "artificial intelligence engineer" in t:
         return "AI Engineer"
 
     if "software engineer" in t:
         return "Software Engineer"
 
-    # fallback: first line
+    # fallback
     first_line = text.split("\n")[0].strip()
 
     if len(first_line) > 60:
