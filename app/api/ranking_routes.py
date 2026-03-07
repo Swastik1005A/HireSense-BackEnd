@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.database import get_db
 from app.models.candidate import Candidate
@@ -60,31 +61,41 @@ def rank_all_candidates(job_id: int, db: Session = Depends(get_db)):
 
 
 # -----------------------------
-# Leaderboard
+# Leaderboard (FIXED)
 # -----------------------------
 @router.get("/leaderboard/{job_id}")
 def get_leaderboard(job_id: int, db: Session = Depends(get_db)):
 
-    scores = (
-        db.query(Score, Candidate)
-        .join(Candidate, Score.candidate_id == Candidate.id)
+    rows = (
+        db.query(
+            Candidate.id,
+            Candidate.name,
+            Candidate.email,
+            func.max(Score.final_score).label("final_score"),
+            func.max(Score.semantic_score).label("semantic_score"),
+            func.max(Score.skill_score).label("skill_score"),
+            func.max(Score.experience_score).label("experience_score"),
+        )
+        .join(Score, Candidate.id == Score.candidate_id)
         .filter(Score.job_id == job_id)
-        .order_by(Score.final_score.desc())
+        .group_by(Candidate.id)
+        .order_by(func.max(Score.final_score).desc())
         .all()
     )
 
     leaderboard = []
 
-    for rank, (score, candidate) in enumerate(scores, start=1):
+    for rank, row in enumerate(rows, start=1):
+
         leaderboard.append({
             "rank": rank,
-            "candidate_id": candidate.id,
-            "name": candidate.name,
-            "email": candidate.email,
-            "final_score": score.final_score,
-            "semantic_score": score.semantic_score,
-            "skill_score": score.skill_score,
-            "experience_score": score.experience_score
+            "candidate_id": row.id,
+            "name": row.name,
+            "email": row.email,
+            "final_score": row.final_score,
+            "semantic_score": row.semantic_score,
+            "skill_score": row.skill_score,
+            "experience_score": row.experience_score
         })
 
     return {
@@ -95,7 +106,7 @@ def get_leaderboard(job_id: int, db: Session = Depends(get_db)):
 
 
 # -----------------------------
-# Ranking Explanation (NEW)
+# Ranking Explanation
 # -----------------------------
 @router.get("/ranking-explanation/{candidate_id}/{job_id}")
 def ranking_explanation(candidate_id: int, job_id: int, db: Session = Depends(get_db)):
@@ -120,9 +131,10 @@ def ranking_explanation(candidate_id: int, job_id: int, db: Session = Depends(ge
         "recommendation": result.get("recommendation", "")
     }
 
-#-----------------------------
-# Detailed Ranking Report (NEW)
 
+# -----------------------------
+# Candidate Skill Gap
+# -----------------------------
 @router.get("/candidate-skill-gap/{candidate_id}/{job_id}")
 def candidate_skill_gap(candidate_id: int, job_id: int, db: Session = Depends(get_db)):
 
