@@ -14,7 +14,7 @@ def detect_job_title(text: str) -> str:
 
     t = text.lower()
 
-    # MOST SPECIFIC FIRST
+    # Most specific roles first
 
     if "data science intern" in t:
         return "Data Science Intern"
@@ -25,6 +25,15 @@ def detect_job_title(text: str) -> str:
     if "data analyst" in t:
         return "Data Analyst"
 
+    if "ai engineer" in t or "artificial intelligence engineer" in t:
+        return "AI Engineer"
+
+    if "machine learning engineer" in t:
+        return "Machine Learning Engineer"
+
+    if "machine learning" in t:
+        return "Machine Learning Engineer"
+
     if "full stack" in t or "fullstack" in t:
         return "Full Stack Developer"
 
@@ -34,19 +43,10 @@ def detect_job_title(text: str) -> str:
     if "frontend" in t:
         return "Frontend Developer"
 
-    if "machine learning engineer" in t:
-        return "Machine Learning Engineer"
-
-    if "machine learning" in t:
-        return "Machine Learning Engineer"
-
-    if "ai engineer" in t or "artificial intelligence engineer" in t:
-        return "AI Engineer"
-
     if "software engineer" in t:
         return "Software Engineer"
 
-    # fallback
+    # fallback → first line
     first_line = text.split("\n")[0].strip()
 
     if len(first_line) > 60:
@@ -56,12 +56,29 @@ def detect_job_title(text: str) -> str:
 
 
 # -----------------------------
+# CLEAN DESCRIPTION
+# -----------------------------
+def clean_description(text: str):
+
+    text = text.strip()
+
+    # Remove "Job Title:" line if user pasted it
+    if text.lower().startswith("job title:"):
+        lines = text.split("\n")
+
+        if len(lines) > 1:
+            text = "\n".join(lines[1:]).strip()
+
+    return text
+
+
+# -----------------------------
 # CREATE JOB
 # -----------------------------
 @router.post("/create-job")
 def create_job(description_text: str, db: Session = Depends(get_db)):
 
-    text = description_text.strip()
+    text = clean_description(description_text)
 
     title = detect_job_title(text)
 
@@ -76,7 +93,7 @@ def create_job(description_text: str, db: Session = Depends(get_db)):
     return {
         "job_id": job.id,
         "title": title,
-        "description_text": text
+        "description": text
     }
 
 
